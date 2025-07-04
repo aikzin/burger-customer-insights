@@ -52,6 +52,11 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				burger: {
+					primary: 'hsl(var(--burger-primary))',
+					secondary: 'hsl(var(--burger-secondary))',
+					accent: 'hsl(var(--burger-accent))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

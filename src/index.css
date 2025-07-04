@@ -38,20 +38,18 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Hamburgueria colors */
+    --burger-primary: 25 95% 53%;
+    --burger-secondary: 12 76% 61%;
+    --burger-accent: 45 100% 51%;
+    
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -83,6 +81,12 @@ All colors MUST be HSL.
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
+    /* Hamburgueria colors dark mode */
+    --burger-primary: 25 95% 53%;
+    --burger-secondary: 12 76% 61%;
+    --burger-accent: 45 100% 51%;
+    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -101,5 +105,15 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .shadow-burger {
+    box-shadow: 0 4px 14px 0 rgba(255, 165, 0, 0.39);
+  }
+  
+  .gradient-burger {
+    background: linear-gradient(135deg, hsl(var(--burger-primary)), hsl(var(--burger-secondary)));
   }
 }
