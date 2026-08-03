@@ -1,5 +1,7 @@
 -- Fase 1: base multiempresa, autenticação, perfis e entidades operacionais centrais.
 create extension if not exists pgcrypto;
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
 
 create type public.app_role as enum ('admin','manager','cashier','kitchen','stock');
 create type public.order_status as enum ('received','confirmed','preparing','ready','out_for_delivery','delivered','cancelled');
@@ -70,6 +72,36 @@ create index customers_org_idx on public.customers(organization_id);
 create index orders_org_created_idx on public.orders(organization_id,created_at desc);
 create index order_items_order_idx on public.order_items(order_id);
 create index products_org_idx on public.products(organization_id);
+create index organization_members_user_idx on public.organization_members(user_id) where active;
+create index products_category_idx on public.products(category_id);
+create index recipe_items_ingredient_idx on public.recipe_items(ingredient_id);
+create index orders_customer_idx on public.orders(customer_id);
+create index orders_attendant_idx on public.orders(attendant_id);
+create index order_items_product_idx on public.order_items(product_id);
+create index payments_order_idx on public.payments(order_id);
+create index audit_log_org_created_idx on public.audit_log(organization_id,created_at desc);
+create index audit_log_actor_idx on public.audit_log(actor_id);
+
+create or replace function private.create_profile_for_auth_user()
+returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  insert into public.profiles(id,full_name)
+  values(new.id,coalesce(nullif(trim(new.raw_user_meta_data->>'full_name'),''),split_part(coalesce(new.email,'Usuário'),'@',1)));
+  return new;
+end;
+$$;
+revoke all on function private.create_profile_for_auth_user() from public,anon,authenticated;
+create trigger auth_user_created_profile after insert on auth.users
+for each row execute function private.create_profile_for_auth_user();
+
+create or replace function private.set_updated_at()
+returns trigger language plpgsql set search_path='' as $$
+begin new.updated_at=now(); return new; end;
+$$;
+revoke all on function private.set_updated_at() from public,anon,authenticated;
+create trigger profiles_set_updated_at before update on public.profiles for each row execute function private.set_updated_at();
+create trigger customers_set_updated_at before update on public.customers for each row execute function private.set_updated_at();
+create trigger orders_set_updated_at before update on public.orders for each row execute function private.set_updated_at();
 
 create or replace function public.is_org_member(org_id uuid) returns boolean language sql stable security invoker set search_path='' as $$
   select exists(select 1 from public.organization_members m where m.organization_id=org_id and m.user_id=(select auth.uid()) and m.active);
@@ -94,7 +126,7 @@ alter table public.audit_log enable row level security;
 create policy "members read organizations" on public.organizations for select to authenticated using(public.is_org_member(id));
 create policy "users read own profile" on public.profiles for select to authenticated using(id=(select auth.uid()));
 create policy "users update own profile" on public.profiles for update to authenticated using(id=(select auth.uid())) with check(id=(select auth.uid()));
-create policy "members read memberships" on public.organization_members for select to authenticated using(public.is_org_member(organization_id));
+create policy "users read own memberships" on public.organization_members for select to authenticated using(user_id=(select auth.uid()));
 
 create policy "members read customers" on public.customers for select to authenticated using(public.is_org_member(organization_id));
 create policy "sales manage customers" on public.customers for all to authenticated using(public.has_org_role(organization_id,array['admin','manager','cashier']::public.app_role[])) with check(public.has_org_role(organization_id,array['admin','manager','cashier']::public.app_role[]));
@@ -117,5 +149,7 @@ create policy "sales manages order items" on public.order_items for all to authe
 create policy "finance accesses payments" on public.payments for all to authenticated using(exists(select 1 from public.orders o where o.id=order_id and public.has_org_role(o.organization_id,array['admin','manager','cashier']::public.app_role[]))) with check(exists(select 1 from public.orders o where o.id=order_id and public.has_org_role(o.organization_id,array['admin','manager','cashier']::public.app_role[])));
 
 grant usage on schema public to authenticated;
-grant select,insert,update,delete on all tables in schema public to authenticated;
-grant usage,select on all sequences in schema public to authenticated;
+grant select on public.organizations,public.organization_members,public.audit_log to authenticated;
+grant select,update on public.profiles to authenticated;
+grant select,insert,update on public.customers,public.categories,public.products,public.ingredients,public.orders,public.order_items,public.payments to authenticated;
+grant select,insert,update,delete on public.recipe_items to authenticated;
