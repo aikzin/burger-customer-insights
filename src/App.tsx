@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Clients from "./pages/Clients";
@@ -14,6 +15,7 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { OrganizationGate } from "./components/OrganizationGate";
+const Catalog = lazy(() => import("./pages/Catalog"));
 
 const queryClient = new QueryClient();
 
@@ -29,7 +31,8 @@ const App = () => (
           <Route element={<ProtectedRoute />}><Route element={<OrganizationGate />}><Route element={<AppShell />}>
             <Route path="/" element={<Index />} />
             <Route path="/clientes" element={<Clients />} />
-            {['pedidos','cozinha','cardapio','estoque','compras','financeiro','marketing','avaliacoes','relatorios','configuracoes'].map(path => <Route key={path} path={`/${path}`} element={<ModulePlaceholder />} />)}
+            <Route path="/cardapio" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando cardápio…</div>}><Catalog /></Suspense>} />
+            {['pedidos','cozinha','estoque','compras','financeiro','marketing','avaliacoes','relatorios','configuracoes'].map(path => <Route key={path} path={`/${path}`} element={<ModulePlaceholder />} />)}
           </Route></Route></Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
