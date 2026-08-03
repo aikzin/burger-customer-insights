@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +14,7 @@ export default function Onboarding() {
   const { session } = useAuth();
   const { organizationId, loading: checking } = useOrganization();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,17 +22,33 @@ export default function Onboarding() {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!supabase || !session) return;
-    setLoading(true); setError("");
-    const organizationId = crypto.randomUUID();
-    const { error: organizationError } = await supabase
-      .from("organizations").insert({ id: organizationId, name: name.trim(), created_by: session.user.id });
-    if (organizationError) { setError("Não foi possível criar a empresa."); setLoading(false); return; }
-    const { error: membershipError } = await supabase.from("organization_members")
-      .insert({ organization_id: organizationId, user_id: session.user.id, role: "admin" });
-    if (membershipError) { setError("A empresa foi criada, mas o acesso não pôde ser concluído."); setLoading(false); return; }
-    await queryClient.invalidateQueries({ queryKey: ["organization"] });
-    setLoading(false);
+    if (!supabase) { setError("A conexão com o sistema não está configurada."); return; }
+    if (!session) { setError("Sua sessão expirou. Entre novamente para continuar."); return; }
+
+    const normalizedName = name.trim();
+    setLoading(true);
+    setError("");
+
+    try {
+      const { data, error: organizationError } = await supabase.rpc("create_organization", {
+        p_name: normalizedName,
+      });
+      if (organizationError) throw organizationError;
+
+      const organization = data as { id?: string; name?: string } | null;
+      if (!organization?.id) throw new Error("A operação não retornou a empresa criada.");
+
+      queryClient.setQueryData(["organization", session.user.id], {
+        organization_id: organization.id,
+        organizations: { name: organization.name ?? normalizedName },
+      });
+      navigate("/", { replace: true });
+    } catch (submissionError) {
+      console.error("[onboarding] não foi possível concluir a configuração", submissionError);
+      setError("Não foi possível concluir a configuração. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return <main className="grid min-h-screen place-items-center bg-background p-4">
@@ -40,8 +57,8 @@ export default function Onboarding() {
         <div className="space-y-2"><Label htmlFor="organization">Nome da empresa</Label>
           <Input id="organization" className="h-12 rounded-xl" value={name} onChange={event => setName(event.target.value)} minLength={2} maxLength={120} autoFocus required placeholder="Ex.: Hamburgueria Central" />
         </div>
-        {error && <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-        <Button className="h-12 w-full rounded-xl shadow-lg shadow-primary/20" disabled={loading || checking}>{loading ? "Criando ambiente…" : "Criar minha operação"}</Button>
+        {error && <p role="alert" aria-live="assertive" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+        <Button type="submit" className="h-12 w-full rounded-xl shadow-lg shadow-primary/20" disabled={loading || checking}>{loading ? "Criando ambiente…" : "Criar minha operação"}</Button>
         <div className="grid gap-2 border-t pt-5 text-xs text-muted-foreground sm:grid-cols-2"><span className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600"/>Você será administrador</span><span className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600"/>Dados isolados por RLS</span></div>
       </form></CardContent>
     </Card>

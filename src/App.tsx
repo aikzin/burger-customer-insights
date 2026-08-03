@@ -3,17 +3,17 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Clients from "./pages/Clients";
-import NotFound from "./pages/NotFound";
 import { AppShell } from "./components/AppShell";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import Login from "./pages/Login";
-import Onboarding from "./pages/Onboarding";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { OrganizationGate } from "./components/OrganizationGate";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import Index from "./pages/Index";
+import Clients from "./pages/Clients";
+import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 import Catalog from "./pages/Catalog";
 import Orders from "./pages/Orders";
 import Kitchen from "./pages/Kitchen";
@@ -25,7 +25,15 @@ import Purchases from "./pages/Purchases";
 import Marketing from "./pages/Marketing";
 import Reviews from "./pages/Reviews";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

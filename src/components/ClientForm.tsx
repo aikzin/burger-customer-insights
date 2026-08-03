@@ -136,14 +136,17 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="preferences">Preferências/Observações</Label>
+            <Label htmlFor="preferences">Preferências de atendimento</Label>
             <Textarea
               id="preferences"
               value={formData.preferences}
               onChange={(e) => handleChange('preferences', e.target.value)}
-              placeholder="Ex: Sem cebola, extra bacon, alérgico a lactose..."
+              placeholder="Ex: sem cebola, ponto da carne, contato preferido..."
               rows={3}
             />
+            <p className="text-xs text-muted-foreground">
+              Não registre documentos, dados de saúde ou outras informações sensíveis neste campo.
+            </p>
           </div>
 
           <Button type="submit" variant="burger" size="lg" className="w-full">
