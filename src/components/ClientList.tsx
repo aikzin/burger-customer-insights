@@ -17,7 +17,7 @@ export const ClientList = ({ clients }: ClientListProps) => {
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.phone.includes(searchTerm);
     
     const matchesFrequency = frequencyFilter === "all" || client.frequency === frequencyFilter;
@@ -112,16 +112,14 @@ export const ClientList = ({ clients }: ClientListProps) => {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between">
                           <h3 className="font-semibold text-lg">{client.name}</h3>
-                          <Badge className={getFrequencyColor(client.frequency)}>
-                            {getFrequencyLabel(client.frequency)}
-                          </Badge>
+                          {client.frequency && <Badge className={getFrequencyColor(client.frequency)}>{getFrequencyLabel(client.frequency)}</Badge>}
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
+                          {client.email && <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4" />
                             <span>{client.email}</span>
-                          </div>
+                          </div>}
                           
                           <div className="flex items-center gap-2">
                             <Phone className="h-4 w-4" />
