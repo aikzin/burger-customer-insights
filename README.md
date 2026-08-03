@@ -45,3 +45,7 @@ VITE_SUPABASE_ANON_KEY=
 ```
 
 Nunca adicione chaves privadas ou `service_role` ao frontend.
+
+## Confiabilidade
+
+A navegação usa um pacote estável e possui recuperação visível para erros de interface. Pedidos de balcão aceitam consumidor não identificado sem criar cadastros artificiais.
