@@ -20,7 +20,7 @@ export interface Client {
 }
 
 interface ClientFormProps {
-  onClientAdd: (client: Client) => void;
+  onClientAdd: (client: Omit<Client, "id" | "frequency" | "averageSpent" | "createdAt">) => Promise<void>;
 }
 
 export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
@@ -34,7 +34,7 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
     preferences: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.phone) {
@@ -46,15 +46,12 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
       return;
     }
 
-    const newClient: Client = {
-      id: Date.now().toString(),
-      ...formData,
-      frequency: undefined,
-      averageSpent: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    onClientAdd(newClient);
+    try {
+      await onClientAdd(formData);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível salvar o cliente.", variant: "destructive" });
+      return;
+    }
     setFormData({
       name: '',
       email: '',
