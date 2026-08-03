@@ -2,7 +2,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Clients from "./pages/Clients";
@@ -14,16 +13,17 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { OrganizationGate } from "./components/OrganizationGate";
-const Catalog = lazy(() => import("./pages/Catalog"));
-const Orders = lazy(() => import("./pages/Orders"));
-const Kitchen = lazy(() => import("./pages/Kitchen"));
-const Inventory = lazy(() => import("./pages/Inventory"));
-const Finance = lazy(() => import("./pages/Finance"));
-const Reports = lazy(() => import("./pages/Reports"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Purchases = lazy(() => import("./pages/Purchases"));
-const Marketing = lazy(() => import("./pages/Marketing"));
-const Reviews = lazy(() => import("./pages/Reviews"));
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import Catalog from "./pages/Catalog";
+import Orders from "./pages/Orders";
+import Kitchen from "./pages/Kitchen";
+import Inventory from "./pages/Inventory";
+import Finance from "./pages/Finance";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import Purchases from "./pages/Purchases";
+import Marketing from "./pages/Marketing";
+import Reviews from "./pages/Reviews";
 
 const queryClient = new QueryClient();
 
@@ -32,27 +32,27 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthProvider><OrganizationProvider><BrowserRouter>
+      <AppErrorBoundary><AuthProvider><OrganizationProvider><BrowserRouter>
         <Routes>
           <Route path="/entrar" element={<Login />} />
           <Route element={<ProtectedRoute />}><Route path="/configurar-empresa" element={<Onboarding />} /></Route>
           <Route element={<ProtectedRoute />}><Route element={<OrganizationGate />}><Route element={<AppShell />}>
             <Route path="/" element={<Index />} />
             <Route path="/clientes" element={<Clients />} />
-            <Route path="/cardapio" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando cardápio…</div>}><Catalog /></Suspense>} />
-            <Route path="/pedidos" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando pedidos…</div>}><Orders /></Suspense>} />
-            <Route path="/cozinha" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando cozinha…</div>}><Kitchen /></Suspense>} />
-            <Route path="/estoque" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando estoque…</div>}><Inventory /></Suspense>} />
-            <Route path="/financeiro" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando financeiro…</div>}><Finance /></Suspense>} />
-            <Route path="/relatorios" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando relatórios…</div>}><Reports /></Suspense>} />
-            <Route path="/configuracoes" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando configurações…</div>}><Settings /></Suspense>} />
-            <Route path="/compras" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando compras…</div>}><Purchases /></Suspense>} />
-            <Route path="/marketing" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando marketing…</div>}><Marketing /></Suspense>} />
-            <Route path="/avaliacoes" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando avaliações…</div>}><Reviews /></Suspense>} />
+            <Route path="/cardapio" element={<Catalog />} />
+            <Route path="/pedidos" element={<Orders />} />
+            <Route path="/cozinha" element={<Kitchen />} />
+            <Route path="/estoque" element={<Inventory />} />
+            <Route path="/financeiro" element={<Finance />} />
+            <Route path="/relatorios" element={<Reports />} />
+            <Route path="/configuracoes" element={<Settings />} />
+            <Route path="/compras" element={<Purchases />} />
+            <Route path="/marketing" element={<Marketing />} />
+            <Route path="/avaliacoes" element={<Reviews />} />
           </Route></Route></Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter></OrganizationProvider></AuthProvider>
+      </BrowserRouter></OrganizationProvider></AuthProvider></AppErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );
