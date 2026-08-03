@@ -6,6 +6,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Clients from "./pages/Clients";
 import NotFound from "./pages/NotFound";
+import ModulePlaceholder from "./pages/ModulePlaceholder";
+import { AppShell } from "./components/AppShell";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import Login from "./pages/Login";
 
 const queryClient = new QueryClient();
 
@@ -14,14 +19,17 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <AuthProvider><BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/clientes" element={<Clients />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/entrar" element={<Login />} />
+          <Route element={<ProtectedRoute />}><Route element={<AppShell />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/clientes" element={<Clients />} />
+            {['pedidos','cozinha','cardapio','estoque','compras','financeiro','marketing','avaliacoes','relatorios','configuracoes'].map(path => <Route key={path} path={`/${path}`} element={<ModulePlaceholder />} />)}
+          </Route></Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
+      </BrowserRouter></AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
