@@ -16,6 +16,8 @@ import Onboarding from "./pages/Onboarding";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { OrganizationGate } from "./components/OrganizationGate";
 const Catalog = lazy(() => import("./pages/Catalog"));
+const Orders = lazy(() => import("./pages/Orders"));
+const Kitchen = lazy(() => import("./pages/Kitchen"));
 
 const queryClient = new QueryClient();
 
@@ -32,7 +34,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/clientes" element={<Clients />} />
             <Route path="/cardapio" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando cardápio…</div>}><Catalog /></Suspense>} />
-            {['pedidos','cozinha','estoque','compras','financeiro','marketing','avaliacoes','relatorios','configuracoes'].map(path => <Route key={path} path={`/${path}`} element={<ModulePlaceholder />} />)}
+            <Route path="/pedidos" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando pedidos…</div>}><Orders /></Suspense>} />
+            <Route path="/cozinha" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando cozinha…</div>}><Kitchen /></Suspense>} />
+            {['estoque','compras','financeiro','marketing','avaliacoes','relatorios','configuracoes'].map(path => <Route key={path} path={`/${path}`} element={<ModulePlaceholder />} />)}
           </Route></Route></Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
