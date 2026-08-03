@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Clients from "./pages/Clients";
 import NotFound from "./pages/NotFound";
-import ModulePlaceholder from "./pages/ModulePlaceholder";
 import { AppShell } from "./components/AppShell";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -22,6 +21,9 @@ const Inventory = lazy(() => import("./pages/Inventory"));
 const Finance = lazy(() => import("./pages/Finance"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Purchases = lazy(() => import("./pages/Purchases"));
+const Marketing = lazy(() => import("./pages/Marketing"));
+const Reviews = lazy(() => import("./pages/Reviews"));
 
 const queryClient = new QueryClient();
 
@@ -44,7 +46,9 @@ const App = () => (
             <Route path="/financeiro" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando financeiro…</div>}><Finance /></Suspense>} />
             <Route path="/relatorios" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando relatórios…</div>}><Reports /></Suspense>} />
             <Route path="/configuracoes" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando configurações…</div>}><Settings /></Suspense>} />
-            {['compras','marketing','avaliacoes'].map(path => <Route key={path} path={`/${path}`} element={<ModulePlaceholder />} />)}
+            <Route path="/compras" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando compras…</div>}><Purchases /></Suspense>} />
+            <Route path="/marketing" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando marketing…</div>}><Marketing /></Suspense>} />
+            <Route path="/avaliacoes" element={<Suspense fallback={<div className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">Carregando avaliações…</div>}><Reviews /></Suspense>} />
           </Route></Route></Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
