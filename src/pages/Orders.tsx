@@ -79,7 +79,7 @@ export default function Orders() {
       setCart([]); setCustomerId("none");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["orders", organizationId] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-summary", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["business-dashboard", organizationId] }),
       ]);
       toast({ title: "Pedido criado", description: `Pedido ${String(orderId).slice(0, 8)} enviado para a operação.` });
     },

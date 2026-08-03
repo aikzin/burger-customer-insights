@@ -123,4 +123,10 @@ All colors MUST be HSL.
   .surface-elevated {
     @apply border bg-card/95 shadow-[0_18px_50px_-30px_hsl(var(--foreground)/0.35)];
   }
+
+  .executive-hero {
+    background:
+      linear-gradient(118deg, hsl(24 24% 10% / 0.98), hsl(22 24% 15% / 0.96)),
+      radial-gradient(circle at 85% 20%, hsl(var(--primary) / 0.28), transparent 24rem);
+  }
 }

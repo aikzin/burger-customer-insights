@@ -25,12 +25,12 @@ export default function Inventory() {
   });
   const create=useMutation({
     mutationFn:async()=>{const values=[stock,minimum,cost].map(value=>Number(value.replace(",",".")));if(values.some(value=>!Number.isFinite(value)||value<0))throw new Error("invalid");const {error}=await supabase!.from("ingredients").insert({organization_id:organizationId,name:name.trim(),unit:unit.trim(),stock_quantity:values[0],minimum_stock:values[1],average_cost:values[2]});if(error)throw error;},
-    onSuccess:async()=>{setName("");setStock("0");setMinimum("0");setCost("0");await queryClient.invalidateQueries({queryKey:["ingredients",organizationId]});toast({title:"Ingrediente cadastrado"});},
+    onSuccess:async()=>{setName("");setStock("0");setMinimum("0");setCost("0");await Promise.all([queryClient.invalidateQueries({queryKey:["ingredients",organizationId]}),queryClient.invalidateQueries({queryKey:["recipe-summaries",organizationId]}),queryClient.invalidateQueries({queryKey:["business-dashboard",organizationId]})]);toast({title:"Ingrediente cadastrado"});},
     onError:()=>toast({title:"Não foi possível cadastrar",description:"Revise os valores ou verifique se o ingrediente já existe.",variant:"destructive"})
   });
   const adjust=useMutation({
     mutationFn:async({item,delta}:{item:Ingredient;delta:number})=>{const next=Math.max(0,Number(item.stock_quantity)+delta);const {error}=await supabase!.from("ingredients").update({stock_quantity:next}).eq("id",item.id).eq("organization_id",organizationId!);if(error)throw error;},
-    onSuccess:()=>queryClient.invalidateQueries({queryKey:["ingredients",organizationId]}),
+    onSuccess:()=>Promise.all([queryClient.invalidateQueries({queryKey:["ingredients",organizationId]}),queryClient.invalidateQueries({queryKey:["recipe-summaries",organizationId]}),queryClient.invalidateQueries({queryKey:["business-dashboard",organizationId]})]),
     onError:()=>toast({title:"Estoque não atualizado",variant:"destructive"})
   });
   const filtered=(ingredients.data??[]).filter(item=>item.name.toLowerCase().includes(search.toLowerCase()));
