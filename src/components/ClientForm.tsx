@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Client {
@@ -15,13 +14,13 @@ export interface Client {
   address: string;
   birthDate: string;
   preferences: string;
-  frequency: 'baixa' | 'media' | 'alta';
+  frequency?: 'baixa' | 'media' | 'alta';
   averageSpent: number;
   createdAt: string;
 }
 
 interface ClientFormProps {
-  onClientAdd: (client: Client) => void;
+  onClientAdd: (client: Omit<Client, "id" | "frequency" | "averageSpent" | "createdAt">) => Promise<void>;
 }
 
 export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
@@ -33,13 +32,12 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
     address: '',
     birthDate: '',
     preferences: '',
-    frequency: 'media' as const,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.name || !formData.phone) {
       toast({
         title: "Erro",
         description: "Por favor, preencha os campos obrigatórios.",
@@ -48,14 +46,12 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
       return;
     }
 
-    const newClient: Client = {
-      id: Date.now().toString(),
-      ...formData,
-      averageSpent: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    onClientAdd(newClient);
+    try {
+      await onClientAdd(formData);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível salvar o cliente.", variant: "destructive" });
+      return;
+    }
     setFormData({
       name: '',
       email: '',
@@ -63,7 +59,6 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
       address: '',
       birthDate: '',
       preferences: '',
-      frequency: 'media',
     });
 
     toast({
@@ -96,14 +91,13 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">Email (opcional)</Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 placeholder="Ex: joao@email.com"
-                required
               />
             </div>
           </div>
@@ -139,23 +133,6 @@ export const ClientForm = ({ onClientAdd }: ClientFormProps) => {
               onChange={(e) => handleChange('address', e.target.value)}
               placeholder="Ex: Rua das Flores, 123 - Centro"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="frequency">Frequência de Compras</Label>
-            <Select 
-              value={formData.frequency} 
-              onValueChange={(value: 'baixa' | 'media' | 'alta') => handleChange('frequency', value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="baixa">Baixa (1-2x por mês)</SelectItem>
-                <SelectItem value="media">Média (1-2x por semana)</SelectItem>
-                <SelectItem value="alta">Alta (3+ por semana)</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">

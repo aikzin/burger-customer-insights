@@ -1,0 +1,21 @@
+import { useQuery } from "@tanstack/react-query";
+import { BarChart3, PackageOpen, ReceiptText, TrendingUp, Users } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { Card,CardContent,CardHeader,CardTitle } from "@/components/ui/card";
+
+export default function Reports(){
+ const {organizationId}=useOrganization();
+ const report=useQuery({queryKey:["reports",organizationId],enabled:Boolean(organizationId&&supabase),queryFn:async()=>{
+  const [orders,customers]=await Promise.all([
+   supabase!.from("orders").select("id,total,payment_status,created_at,order_items(quantity,products(name))").eq("organization_id",organizationId!).order("created_at"),
+   supabase!.from("customers").select("id",{count:"exact"}).eq("organization_id",organizationId!)
+  ]);if(orders.error)throw orders.error;if(customers.error)throw customers.error;
+  const paid=orders.data.filter(order=>order.payment_status==="paid");const revenue=paid.reduce((sum,order)=>sum+Number(order.total),0);
+  const products=new Map<string,number>();paid.forEach(order=>order.order_items.forEach(item=>{const name=(item.products as unknown as {name:string}).name;products.set(name,(products.get(name)??0)+item.quantity);}));
+  return {orders:orders.data.length,paid:paid.length,revenue,ticket:paid.length?revenue/paid.length:0,customers:customers.count??0,products:[...products.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5)};
+ }});
+ const data=report.data??{orders:0,paid:0,revenue:0,ticket:0,customers:0,products:[]};const money=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
+ const cards=[["Receita",money.format(data.revenue),ReceiptText],["Pedidos",String(data.orders),PackageOpen],["Ticket médio",money.format(data.ticket),TrendingUp],["Clientes",String(data.customers),Users]] as const;
+ return <div className="min-h-screen bg-background p-4 md:p-8 lg:p-10"><div className="mx-auto max-w-7xl space-y-7"><div><p className="text-sm font-semibold uppercase tracking-[.16em] text-primary">Análise</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Relatórios</h1><p className="mt-1 text-muted-foreground">Indicadores calculados somente com dados registrados.</p></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label,value,Icon])=><Card key={label} className="surface-elevated rounded-2xl"><CardContent className="p-5"><span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4"/></span><p className="mt-4 text-sm text-muted-foreground">{label}</p><strong className="mt-1 block text-2xl">{report.isLoading?"…":value}</strong></CardContent></Card>)}</div><div className="grid gap-5 lg:grid-cols-2"><Card className="surface-elevated rounded-2xl"><CardHeader><CardTitle className="flex items-center gap-2 text-xl"><BarChart3 className="h-5 w-5 text-primary"/>Produtos mais vendidos</CardTitle></CardHeader><CardContent>{data.products.length?<div className="space-y-3">{data.products.map(([name,quantity],index)=><div key={name} className="flex items-center gap-3 rounded-xl bg-muted/60 p-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-sm font-bold text-white">{index+1}</span><span className="flex-1 font-medium">{name}</span><strong>{quantity} un.</strong></div>)}</div>:<p className="py-12 text-center text-muted-foreground">Registre pedidos pagos para gerar o ranking.</p>}</CardContent></Card><Card className="surface-elevated rounded-2xl"><CardHeader><CardTitle className="text-xl">Qualidade da receita</CardTitle></CardHeader><CardContent className="space-y-4"><div className="flex justify-between rounded-xl border p-4"><span className="text-muted-foreground">Pedidos pagos</span><strong>{data.paid}</strong></div><div className="flex justify-between rounded-xl border p-4"><span className="text-muted-foreground">Pedidos pendentes</span><strong>{Math.max(0,data.orders-data.paid)}</strong></div><div className="flex justify-between rounded-xl border p-4"><span className="text-muted-foreground">Taxa de pagamento</span><strong>{data.orders?Math.round(data.paid/data.orders*100):0}%</strong></div></CardContent></Card></div></div></div>;
+}

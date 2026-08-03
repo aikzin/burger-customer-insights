@@ -1,127 +1,43 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Dashboard } from "@/components/Dashboard";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ShoppingBag, BarChart3, Settings } from "lucide-react";
-import type { Client } from "@/components/ClientForm";
+import { ArrowRight, ChefHat, ClipboardPlus, ReceiptText, ShoppingBag, TrendingUp, Users } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
-const Index = () => {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [stats, setStats] = useState({
-    totalClients: 0,
-    totalOrders: 0,
-    monthlyRevenue: 0,
-    averageOrder: 0
+export default function Index() {
+  const { organizationId, organizationName } = useOrganization();
+  const summary = useQuery({
+    queryKey: ["dashboard-summary", organizationId],
+    enabled: Boolean(organizationId && supabase),
+    queryFn: async () => {
+      const [customers, orders] = await Promise.all([
+        supabase!.from("customers").select("*", { count: "exact", head: true }).eq("organization_id", organizationId!),
+        supabase!.from("orders").select("total,payment_status").eq("organization_id", organizationId!),
+      ]);
+      if (customers.error) throw customers.error;
+      if (orders.error) throw orders.error;
+      const paid = orders.data.filter(order => order.payment_status === "paid");
+      const revenue = paid.reduce((sum, order) => sum + Number(order.total), 0);
+      return { customers: customers.count ?? 0, orders: orders.data.length, revenue, ticket: paid.length ? revenue / paid.length : 0 };
+    },
   });
-
-  // Simulate loading data from localStorage or API
-  useEffect(() => {
-    const savedClients = localStorage.getItem('burger-clients');
-    if (savedClients) {
-      const parsedClients = JSON.parse(savedClients);
-      setClients(parsedClients);
-      
-      // Calculate stats
-      const totalClients = parsedClients.length;
-      const totalOrders = totalClients * 12; // Simulate 12 orders per client on average
-      const monthlyRevenue = totalOrders * 28.50; // Average order value
-      const averageOrder = totalOrders > 0 ? monthlyRevenue / totalOrders : 0;
-      
-      setStats({
-        totalClients,
-        totalOrders,
-        monthlyRevenue,
-        averageOrder
-      });
-    }
-  }, []);
-
-  const menuItems = [
-    {
-      title: "Gestão de Clientes",
-      description: "Cadastrar e gerenciar clientes",
-      icon: Users,
-      href: "/clientes",
-      color: "text-burger-primary"
-    },
-    {
-      title: "Pedidos",
-      description: "Gerenciar pedidos e vendas",
-      icon: ShoppingBag,
-      href: "#",
-      color: "text-burger-secondary"
-    },
-    {
-      title: "Relatórios",
-      description: "Análises e estatísticas",
-      icon: BarChart3,
-      href: "#",
-      color: "text-burger-accent"
-    },
-    {
-      title: "Configurações",
-      description: "Configurar sistema",
-      icon: Settings,
-      href: "#",
-      color: "text-muted-foreground"
-    }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-4 text-primary bg-gradient-to-r from-burger-primary to-burger-secondary bg-clip-text text-transparent">
-            Hamburgueria Central
-          </h1>
-          <p className="text-xl text-muted-foreground">Sistema de Gestão e Análise de Clientes</p>
-        </div>
-
-        <Dashboard {...stats} />
-
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6 text-center">Menu Principal</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {menuItems.map((item, index) => {
-              const Icon = item.icon;
-              const isLink = item.href !== "#";
-              
-              const cardContent = (
-                <Card className="transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
-                  <CardHeader className="text-center">
-                    <Icon className={`h-12 w-12 mx-auto ${item.color} mb-4`} />
-                    <CardTitle className="text-lg">{item.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground text-center">{item.description}</p>
-                  </CardContent>
-                </Card>
-              );
-
-              return isLink ? (
-                <Link key={index} to={item.href}>
-                  {cardContent}
-                </Link>
-              ) : (
-                <div key={index} onClick={() => alert('Funcionalidade em desenvolvimento!')}>
-                  {cardContent}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-12 text-center">
-          <Link to="/clientes">
-            <Button variant="burger" size="lg" className="text-lg px-8 py-3">
-              Começar Agora
-            </Button>
-          </Link>
-        </div>
+  const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const cards = [
+    ["Faturamento", money.format(summary.data?.revenue ?? 0), ReceiptText],
+    ["Pedidos", String(summary.data?.orders ?? 0), ShoppingBag],
+    ["Ticket médio", money.format(summary.data?.ticket ?? 0), TrendingUp],
+    ["Clientes", String(summary.data?.customers ?? 0), Users],
+  ] as const;
+  return <div className="mx-auto max-w-[1500px] space-y-7 p-4 md:p-8 lg:p-10">
+    <section className="gradient-burger relative overflow-hidden rounded-[2rem] px-6 py-8 text-white shadow-xl shadow-primary/15 md:px-10 md:py-10">
+      <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10"/><div className="absolute -bottom-20 right-32 h-44 w-44 rounded-full bg-black/10"/>
+      <div className="relative max-w-2xl"><p className="mb-2 text-sm font-semibold uppercase tracking-[.18em] text-white/70">Visão geral</p><h1 className="text-3xl font-bold tracking-tight md:text-4xl">Olá, {organizationName}</h1><p className="mt-3 max-w-xl text-white/80">Acompanhe a operação com números reais e transforme cada pedido em uma decisão melhor.</p>
+        <div className="mt-6 flex flex-wrap gap-3"><Button asChild className="bg-white text-foreground hover:bg-white/90"><Link to="/pedidos"><ClipboardPlus className="mr-2 h-4 w-4"/>Novo pedido</Link></Button><Button asChild variant="ghost" className="text-white hover:bg-white/10 hover:text-white"><Link to="/clientes">Ver clientes<ArrowRight className="ml-2 h-4 w-4"/></Link></Button></div>
       </div>
-    </div>
-  );
-};
-
-export default Index;
+    </section>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([title,value,Icon]) => <Card key={title} className="surface-elevated rounded-2xl"><CardContent className="p-5"><div className="mb-5 flex items-center justify-between"><span className="text-sm font-medium text-muted-foreground">{title}</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4"/></span></div><div className="text-2xl font-bold">{summary.isLoading ? "…" : value}</div><p className="mt-1 text-xs text-muted-foreground">Dados registrados no sistema</p></CardContent></Card>)}</div>
+    <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]"><Card className="surface-elevated rounded-2xl"><CardHeader><CardTitle>Movimento da operação</CardTitle></CardHeader><CardContent className="grid min-h-56 place-items-center"><div className="text-center"><ChefHat className="mx-auto mb-3 h-10 w-10 text-primary/50"/><p className="font-medium">Pronto para receber pedidos</p><p className="mt-1 max-w-sm text-sm text-muted-foreground">O gráfico será preenchido conforme pedidos pagos forem registrados.</p></div></CardContent></Card><Card className="surface-elevated rounded-2xl"><CardHeader><CardTitle>Próximas ações</CardTitle></CardHeader><CardContent className="space-y-3"><Link to="/clientes" className="flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted"><span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary"><Users className="h-4 w-4"/></span><div className="flex-1"><p className="text-sm font-medium">Cadastrar cliente</p><p className="text-xs text-muted-foreground">Construa sua base de relacionamento</p></div><ArrowRight className="h-4 w-4 text-muted-foreground"/></Link><Link to="/cardapio" className="flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted"><span className="grid h-9 w-9 place-items-center rounded-lg bg-amber-500/10 text-amber-600"><ShoppingBag className="h-4 w-4"/></span><div className="flex-1"><p className="text-sm font-medium">Montar cardápio</p><p className="text-xs text-muted-foreground">Prepare produtos e categorias</p></div><ArrowRight className="h-4 w-4 text-muted-foreground"/></Link></CardContent></Card></div>
+  </div>;
+}
