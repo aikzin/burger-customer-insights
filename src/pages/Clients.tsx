@@ -1,17 +1,49 @@
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClientForm, type Client } from "@/components/ClientForm";
 import { ClientList } from "@/components/ClientList";
 import { Analytics } from "@/components/Analytics";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, UserPlus, BarChart3 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 const Clients = () => {
-  const [clients, setClients] = useState<Client[]>([]);
+  const { organizationId, organizationName } = useOrganization();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("list");
-
-  const handleClientAdd = (newClient: Client) => {
-    setClients(prev => [...prev, newClient]);
+  const clientsQuery = useQuery({
+    queryKey: ["customers", organizationId],
+    enabled: Boolean(organizationId && supabase),
+    queryFn: async () => {
+      const { data, error } = await supabase!.from("customers")
+        .select("id,name,email,phone,address,birth_date,preferences,created_at")
+        .eq("organization_id", organizationId!).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data.map(row => ({
+        id: row.id, name: row.name, email: row.email ?? "", phone: row.phone,
+        address: typeof row.address === "object" && row.address && "formatted" in row.address ? String(row.address.formatted) : "",
+        birthDate: row.birth_date ?? "", preferences: row.preferences ?? "",
+        frequency: undefined, averageSpent: 0, createdAt: row.created_at,
+      })) satisfies Client[];
+    },
+  });
+  const createClient = useMutation({
+    mutationFn: async (client: Omit<Client, "id" | "frequency" | "averageSpent" | "createdAt">) => {
+      const { error } = await supabase!.from("customers").insert({
+        organization_id: organizationId, name: client.name, phone: client.phone,
+        email: client.email || null, birth_date: client.birthDate || null,
+        address: client.address ? { formatted: client.address } : {},
+        preferences: client.preferences || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers", organizationId] }),
+  });
+  const clients = clientsQuery.data ?? [];
+  const handleClientAdd = async (newClient: Omit<Client, "id" | "frequency" | "averageSpent" | "createdAt">) => {
+    await createClient.mutateAsync(newClient);
     setActiveTab("list");
   };
 
@@ -20,7 +52,7 @@ const Clients = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-2 text-primary">Gestão de Clientes</h1>
-          <p className="text-xl text-muted-foreground">Hamburgueria Central</p>
+          <p className="text-xl text-muted-foreground">{organizationName}</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -40,6 +72,8 @@ const Clients = () => {
           </TabsList>
 
           <TabsContent value="list">
+            {clientsQuery.isLoading && <p className="py-6 text-center text-muted-foreground">Carregando clientes…</p>}
+            {clientsQuery.isError && <p className="py-6 text-center text-destructive">Não foi possível carregar os clientes.</p>}
             <ClientList clients={clients} />
           </TabsContent>
 
