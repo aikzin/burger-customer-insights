@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ClientForm, type Client } from "@/components/ClientForm";
 import { ClientList } from "@/components/ClientList";
 import { Analytics } from "@/components/Analytics";
@@ -10,31 +10,13 @@ const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [activeTab, setActiveTab] = useState("list");
 
-  // Load clients from localStorage on component mount
-  useEffect(() => {
-    const savedClients = localStorage.getItem('burger-clients');
-    if (savedClients) {
-      try {
-        const parsedClients = JSON.parse(savedClients);
-        setClients(parsedClients);
-      } catch (error) {
-        console.error('Erro ao carregar clientes:', error);
-      }
-    }
-  }, []);
-
-  // Save clients to localStorage whenever clients array changes
-  useEffect(() => {
-    localStorage.setItem('burger-clients', JSON.stringify(clients));
-  }, [clients]);
-
   const handleClientAdd = (newClient: Client) => {
     setClients(prev => [...prev, newClient]);
     setActiveTab("list");
   };
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-2 text-primary">Gestão de Clientes</h1>
