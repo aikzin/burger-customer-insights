@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Clock3, Pencil, Plus, Search, Tag, Utensils } from "lucide-react";
+import { BookOpen, Calculator, Clock3, Pencil, Plus, Search, Tag, Utensils } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RecipeDialog } from "@/components/RecipeDialog";
 
 type Category = { id: string; name: string };
 type Product = {
@@ -33,6 +34,12 @@ type ProductDraft = {
   description: string; salesHook: string; active: boolean;
 };
 
+type RecipeSummary = {
+  product_id: string;
+  quantity: number;
+  ingredients: { average_cost: number } | null;
+};
+
 export default function Catalog() {
   const { organizationId } = useOrganization();
   const queryClient = useQueryClient();
@@ -49,6 +56,7 @@ export default function Catalog() {
   const [draft, setDraft] = useState<ProductDraft>({ name: "", categoryId: "none", price: "", minutes: "", description: "", salesHook: "", active: true });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryEditName, setCategoryEditName] = useState("");
+  const [recipeProduct, setRecipeProduct] = useState<Product | null>(null);
 
   const categories = useQuery({
     queryKey: ["categories", organizationId],
@@ -70,6 +78,17 @@ export default function Catalog() {
         .eq("organization_id", organizationId!).order("name");
       if (error) throw error;
       return data as unknown as Product[];
+    },
+  });
+
+  const recipeSummaries = useQuery({
+    queryKey: ["recipe-summaries", organizationId],
+    enabled: Boolean(organizationId && supabase),
+    queryFn: async () => {
+      const { data, error } = await supabase!.from("recipe_items")
+        .select("product_id,quantity,ingredients(average_cost)");
+      if (error) throw error;
+      return data as unknown as RecipeSummary[];
     },
   });
 
@@ -106,7 +125,10 @@ export default function Catalog() {
     },
     onSuccess: async () => {
       setProductName(""); setPrice(""); setMinutes(""); setCategoryId("none"); setDescription(""); setSalesHook("");
-      await queryClient.invalidateQueries({ queryKey: ["products", organizationId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["products", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["business-dashboard", organizationId] }),
+      ]);
       toast({ title: "Produto criado", description: "O item já está disponível no cardápio." });
     },
     onError: error => toast({
@@ -121,7 +143,10 @@ export default function Catalog() {
       const { error } = await supabase!.from("products").update({ active }).eq("id", id).eq("organization_id", organizationId!);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products", organizationId] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["products", organizationId] }),
+      queryClient.invalidateQueries({ queryKey: ["business-dashboard", organizationId] }),
+    ]),
     onError: () => toast({ title: "Alteração não salva", description: "Tente novamente.", variant: "destructive" }),
   });
 
@@ -145,7 +170,10 @@ export default function Catalog() {
     },
     onSuccess: async () => {
       setEditingProduct(null);
-      await queryClient.invalidateQueries({ queryKey: ["products", organizationId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["products", organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ["business-dashboard", organizationId] }),
+      ]);
       toast({ title: "Produto atualizado" });
     },
     onError: () => toast({ title: "Alteração não salva", description: "Revise os campos ou verifique se o nome já existe.", variant: "destructive" }),
@@ -187,6 +215,10 @@ export default function Catalog() {
     product.categories?.name.toLowerCase().includes(search.toLowerCase())
   );
   const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const recipeCostByProduct = new Map<string, number>();
+  for (const item of recipeSummaries.data ?? []) {
+    recipeCostByProduct.set(item.product_id, (recipeCostByProduct.get(item.product_id) ?? 0) + Number(item.quantity) * Number(item.ingredients?.average_cost ?? 0));
+  }
 
   return <div className="min-h-screen bg-background p-4 md:p-8 lg:p-10">
     <div className="mx-auto max-w-7xl space-y-7">
@@ -212,7 +244,17 @@ export default function Catalog() {
           </CardContent></Card>
 
           <Card className="surface-elevated rounded-2xl"><CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between"><CardTitle className="text-xl">Produtos</CardTitle><div className="relative w-full sm:max-w-sm"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/><Input className="h-10 rounded-xl pl-9" value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar produto ou categoria"/></div></CardHeader><CardContent>
-            {products.isLoading ? <p className="py-10 text-center text-sm text-muted-foreground">Carregando produtos…</p> : products.isError ? <p className="py-10 text-center text-sm text-destructive">Não foi possível carregar o cardápio.</p> : filteredProducts.length === 0 ? <div className="grid min-h-52 place-items-center text-center"><div><BookOpen className="mx-auto mb-3 h-10 w-10 text-primary/40"/><p className="font-medium">{search ? "Nenhum produto encontrado" : "Seu cardápio está vazio"}</p><p className="mt-1 text-sm text-muted-foreground">{search ? "Tente outro termo." : "Cadastre o primeiro produto acima."}</p></div></div> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map(product => <article key={product.id} className="rounded-2xl border bg-card p-4 transition-colors hover:border-primary/25"><div className="flex items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Utensils className="h-5 w-5"/></span><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><h2 className="truncate font-semibold">{product.name}</h2><p className="mt-0.5 text-xs text-muted-foreground">{product.categories?.name ?? "Sem categoria"}</p></div><div className="flex items-center gap-1"><Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" aria-label={`Editar ${product.name}`} onClick={() => openProductEditor(product)}><Pencil className="h-4 w-4"/></Button><Switch aria-label={product.active ? "Desativar produto" : "Ativar produto"} checked={product.active} disabled={toggleProduct.isPending} onCheckedChange={active => toggleProduct.mutate({ id: product.id, active })}/></div></div>{product.description && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{product.description}</p>}<div className="mt-4 flex items-end justify-between gap-3"><p className="text-lg font-bold text-primary">{money.format(product.sale_price)}</p><div className="flex items-center gap-2">{product.preparation_minutes !== null && <Badge variant="secondary" className="gap-1"><Clock3 className="h-3 w-3"/>{product.preparation_minutes} min</Badge>}<Badge variant={product.active ? "default" : "outline"}>{product.active ? "Ativo" : "Pausado"}</Badge></div></div></div></div></article>)}</div>}
+            {products.isLoading ? <p className="py-10 text-center text-sm text-muted-foreground">Carregando produtos…</p> : products.isError ? <p className="py-10 text-center text-sm text-destructive">Não foi possível carregar o cardápio.</p> : filteredProducts.length === 0 ? <div className="grid min-h-52 place-items-center text-center"><div><BookOpen className="mx-auto mb-3 h-10 w-10 text-primary/40"/><p className="font-medium">{search ? "Nenhum produto encontrado" : "Seu cardápio está vazio"}</p><p className="mt-1 text-sm text-muted-foreground">{search ? "Tente outro termo." : "Cadastre o primeiro produto acima."}</p></div></div> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map(product => {
+              const recipeCost = recipeCostByProduct.get(product.id);
+              const foodCost = recipeCost !== undefined && Number(product.sale_price) > 0 ? 100 * recipeCost / Number(product.sale_price) : null;
+              return <article key={product.id} className="rounded-2xl border bg-card p-4 transition-colors hover:border-primary/25">
+                <div className="flex items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Utensils className="h-5 w-5"/></span><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div><h2 className="truncate font-semibold">{product.name}</h2><p className="mt-0.5 text-xs text-muted-foreground">{product.categories?.name ?? "Sem categoria"}</p></div><div className="flex items-center gap-1"><Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" aria-label={`Editar ${product.name}`} onClick={() => openProductEditor(product)}><Pencil className="h-4 w-4"/></Button><Switch aria-label={product.active ? "Desativar produto" : "Ativar produto"} checked={product.active} disabled={toggleProduct.isPending} onCheckedChange={active => toggleProduct.mutate({ id: product.id, active })}/></div></div>
+                  {product.description && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{product.description}</p>}
+                  <div className="mt-4 flex items-end justify-between gap-3"><div><p className="text-lg font-bold text-primary">{money.format(product.sale_price)}</p><p className="text-[11px] text-muted-foreground">{recipeCost === undefined ? "Custo não calculado" : `${money.format(recipeCost)} · CMV ${foodCost?.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`}</p></div><div className="flex items-center gap-2">{product.preparation_minutes !== null && <Badge variant="secondary" className="gap-1"><Clock3 className="h-3 w-3"/>{product.preparation_minutes} min</Badge>}<Badge variant={product.active ? "default" : "outline"}>{product.active ? "Ativo" : "Pausado"}</Badge></div></div>
+                  <Button type="button" variant="outline" size="sm" className="mt-4 w-full rounded-xl" onClick={() => setRecipeProduct(product)}><Calculator className="mr-2 h-4 w-4"/>{recipeCost === undefined ? "Criar ficha técnica" : "Editar ficha técnica"}</Button>
+                </div></div>
+              </article>;
+            })}</div>}
           </CardContent></Card>
         </TabsContent>
 
@@ -238,6 +280,7 @@ export default function Catalog() {
       <Dialog open={Boolean(editingCategory)} onOpenChange={open => !open && setEditingCategory(null)}>
         <DialogContent className="rounded-2xl sm:max-w-md"><DialogHeader><DialogTitle>Editar categoria</DialogTitle><DialogDescription>Os produtos vinculados acompanharão o novo nome.</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={event => { event.preventDefault(); updateCategory.mutate(); }}><div className="space-y-2"><Label>Nome</Label><Input value={categoryEditName} onChange={event => setCategoryEditName(event.target.value)} minLength={2} maxLength={80} required/></div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>Cancelar</Button><Button disabled={updateCategory.isPending}>Salvar</Button></div></form></DialogContent>
       </Dialog>
+      <RecipeDialog product={recipeProduct} open={Boolean(recipeProduct)} onOpenChange={open => !open && setRecipeProduct(null)}/>
     </div>
   </div>;
 }

@@ -27,7 +27,7 @@ export default function Finance() {
   });
   const pay=useMutation({
     mutationFn:async({id,amount,paymentMethod}:{id:string;amount:number;paymentMethod:string})=>{const {error}=await supabase!.rpc("record_payment",{p_order_id:id,p_method:paymentMethod,p_amount:amount});if(error)throw error;},
-    onSuccess:async(_data,variables)=>{await Promise.all([queryClient.invalidateQueries({queryKey:["finance-orders",organizationId]}),queryClient.invalidateQueries({queryKey:["orders",organizationId]}),queryClient.invalidateQueries({queryKey:["dashboard-summary",organizationId]})]);toast({title:"Pagamento registrado",description:`Forma: ${methodLabels[variables.paymentMethod] ?? variables.paymentMethod}.`});},
+    onSuccess:async(_data,variables)=>{await Promise.all([queryClient.invalidateQueries({queryKey:["finance-orders",organizationId]}),queryClient.invalidateQueries({queryKey:["orders",organizationId]}),queryClient.invalidateQueries({queryKey:["business-dashboard",organizationId]})]);toast({title:"Pagamento registrado",description:`Forma: ${methodLabels[variables.paymentMethod] ?? variables.paymentMethod}.`});},
     onError:()=>toast({title:"Pagamento não registrado",description:"O valor foi rejeitado pelo servidor.",variant:"destructive"})
   });
   const list=orders.data??[]; const paid=list.filter(order=>order.payment_status==="paid"); const pending=list.filter(order=>order.payment_status!=="paid"&&order.operational_status!=="cancelled");
