@@ -8,8 +8,8 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 36 33% 97%;
+    --foreground: 24 20% 12%;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -17,40 +17,40 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 15 82% 52%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 34 45% 92%;
+    --secondary-foreground: 24 28% 18%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 30 22% 93%;
+    --muted-foreground: 24 10% 42%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 40 88% 88%;
+    --accent-foreground: 24 28% 18%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 28 19% 86%;
+    --input: 28 19% 82%;
+    --ring: 15 82% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.9rem;
 
     /* Hamburgueria colors */
     --burger-primary: 25 95% 53%;
     --burger-secondary: 12 76% 61%;
     --burger-accent: 45 100% 51%;
     
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 24 24% 12%;
+    --sidebar-foreground: 30 20% 88%;
+    --sidebar-primary: 15 82% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 24 18% 19%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 24 14% 22%;
+    --sidebar-ring: 15 82% 52%;
   }
 
   .dark {
@@ -105,6 +105,9 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Aptos", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    background-image: radial-gradient(circle at 90% -10%, hsl(var(--burger-accent) / .12), transparent 28rem);
+    min-width: 320px;
   }
 }
 
@@ -114,6 +117,10 @@ All colors MUST be HSL.
   }
   
   .gradient-burger {
-    background: linear-gradient(135deg, hsl(var(--burger-primary)), hsl(var(--burger-secondary)));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--burger-secondary)));
+  }
+
+  .surface-elevated {
+    @apply border bg-card/95 shadow-[0_18px_50px_-30px_hsl(var(--foreground)/0.35)];
   }
 }
