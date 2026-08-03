@@ -6,15 +6,16 @@ import type { Client } from "./ClientForm";
 
 interface AnalyticsProps {
   clients: Client[];
+  organizationName?: string;
 }
 
-export const Analytics = ({ clients }: AnalyticsProps) => {
+export const Analytics = ({ clients, organizationName }: AnalyticsProps) => {
   // Calculate analytics from client data
   const totalClients = clients.length;
   
   const frequencyStats = clients.reduce(
     (acc, client) => {
-      acc[client.frequency]++;
+      acc[client.frequency ?? "baixa"]++;
       return acc;
     },
     { alta: 0, media: 0, baixa: 0 }
@@ -50,7 +51,7 @@ export const Analytics = ({ clients }: AnalyticsProps) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-primary mb-2">Analytics da Hamburgueria Central</h2>
+        <h2 className="text-3xl font-bold text-primary mb-2">Analytics da {organizationName ?? "empresa"}</h2>
         <p className="text-muted-foreground">Insights e estatísticas dos seus clientes</p>
       </div>
 

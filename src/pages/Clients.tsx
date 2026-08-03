@@ -16,16 +16,40 @@ const Clients = () => {
     queryKey: ["customers", organizationId],
     enabled: Boolean(organizationId && supabase),
     queryFn: async () => {
-      const { data, error } = await supabase!.from("customers")
-        .select("id,name,email,phone,address,birth_date,preferences,created_at")
-        .eq("organization_id", organizationId!).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data.map(row => ({
-        id: row.id, name: row.name, email: row.email ?? "", phone: row.phone,
-        address: typeof row.address === "object" && row.address && "formatted" in row.address ? String(row.address.formatted) : "",
-        birthDate: row.birth_date ?? "", preferences: row.preferences ?? "",
-        frequency: undefined, averageSpent: 0, createdAt: row.created_at,
-      })) satisfies Client[];
+      const [customersResult, ordersResult] = await Promise.all([
+        supabase!.from("customers")
+          .select("id,name,email,phone,address,birth_date,preferences,created_at")
+          .eq("organization_id", organizationId!).order("created_at", { ascending: false }),
+        supabase!.from("orders")
+          .select("customer_id,total,payment_status")
+          .eq("organization_id", organizationId!)
+          .eq("payment_status", "paid")
+          .not("customer_id", "is", null),
+      ]);
+      if (customersResult.error) throw customersResult.error;
+      if (ordersResult.error) throw ordersResult.error;
+
+      const purchaseStats = new Map<string, { count: number; total: number }>();
+      for (const order of ordersResult.data) {
+        if (!order.customer_id) continue;
+        const current = purchaseStats.get(order.customer_id) ?? { count: 0, total: 0 };
+        current.count += 1;
+        current.total += Number(order.total);
+        purchaseStats.set(order.customer_id, current);
+      }
+
+      return customersResult.data.map(row => {
+        const stats = purchaseStats.get(row.id) ?? { count: 0, total: 0 };
+        const frequency: Client["frequency"] = stats.count >= 4 ? "alta" : stats.count >= 2 ? "media" : "baixa";
+        return {
+          id: row.id, name: row.name, email: row.email ?? "", phone: row.phone,
+          address: typeof row.address === "object" && row.address && "formatted" in row.address ? String(row.address.formatted) : "",
+          birthDate: row.birth_date ?? "", preferences: row.preferences ?? "",
+          frequency,
+          averageSpent: stats.count ? stats.total / stats.count : 0,
+          createdAt: row.created_at,
+        };
+      }) satisfies Client[];
     },
   });
   const createClient = useMutation({
@@ -82,7 +106,7 @@ const Clients = () => {
           </TabsContent>
 
           <TabsContent value="analytics">
-            <Analytics clients={clients} />
+            <Analytics clients={clients} organizationName={organizationName ?? undefined} />
           </TabsContent>
         </Tabs>
       </div>

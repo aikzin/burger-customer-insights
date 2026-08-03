@@ -41,7 +41,7 @@ As migrations versionadas estão em `supabase/migrations`. Variáveis públicas 
 
 ```env
 VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
+VITE_SUPABASE_PUBLISHABLE_KEY=
 ```
 
 Nunca adicione chaves privadas ou `service_role` ao frontend.
