@@ -22,11 +22,12 @@ export default function Onboarding() {
     event.preventDefault();
     if (!supabase || !session) return;
     setLoading(true); setError("");
-    const { data: organization, error: organizationError } = await supabase
-      .from("organizations").insert({ name: name.trim(), created_by: session.user.id }).select("id").single();
+    const organizationId = crypto.randomUUID();
+    const { error: organizationError } = await supabase
+      .from("organizations").insert({ id: organizationId, name: name.trim(), created_by: session.user.id });
     if (organizationError) { setError("Não foi possível criar a empresa."); setLoading(false); return; }
     const { error: membershipError } = await supabase.from("organization_members")
-      .insert({ organization_id: organization.id, user_id: session.user.id, role: "admin" });
+      .insert({ organization_id: organizationId, user_id: session.user.id, role: "admin" });
     if (membershipError) { setError("A empresa foi criada, mas o acesso não pôde ser concluído."); setLoading(false); return; }
     await queryClient.invalidateQueries({ queryKey: ["organization"] });
     setLoading(false);
